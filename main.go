@@ -11,14 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/util/homedir"
-
 	promapi "github.com/prometheus/client_golang/api"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
 
 var kubeconfig *string
@@ -77,14 +76,16 @@ func getStatefulSetCPU(ns, name string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	val, err := getPromQueryResult(ns, podPromRegex)
+	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s"})`, ns, podPromRegex)
+
+	val, err := getPromQueryResult(promQuery)
 	if err != nil {
 		return nil, err
 	}
 	return val, nil
 }
 
-func getPromQueryResult(ns, podQuery string) (*float64, error) {
+func getPromQueryResult(promQuery string) (*float64, error) {
 	client, err := promapi.NewClient(promapi.Config{
 		Address: "http://127.0.0.1:9090/",
 	})
@@ -93,7 +94,6 @@ func getPromQueryResult(ns, podQuery string) (*float64, error) {
 	}
 	promClient := promv1.NewAPI(client)
 
-	promQuery := fmt.Sprintf(`node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s"}`, ns, podQuery)
 	fmt.Println(promQuery)
 	val, warn, err := promClient.Query(context.Background(), promQuery, time.Now())
 	if err != nil {
@@ -187,7 +187,9 @@ func getPodsCPU(ns string, selector map[string]string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	val, err := getPromQueryResult(ns, podPromRegex)
+	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s"})`, ns, podPromRegex)
+
+	val, err := getPromQueryResult(promQuery)
 	if err != nil {
 		return nil, err
 	}
