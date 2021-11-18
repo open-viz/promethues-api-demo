@@ -76,7 +76,7 @@ func getStatefulSetCPU(ns, name string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s"})`, ns, podPromRegex)
+	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s", container!=""})`, ns, podPromRegex)
 
 	val, err := getPromQueryResult(promQuery)
 	if err != nil {
@@ -160,6 +160,42 @@ func minINT(a, b int) int {
 	return b
 }
 
+func getPodsMemory(ns string, selector map[string]string) (*float64, error) {
+	kc, err := getKubeClient()
+	if err != nil {
+		return nil, err
+	}
+	podList, err := kc.CoreV1().Pods(ns).List(context.Background(), metav1.ListOptions{
+		LabelSelector: labels.Set(selector).String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	pods := make([]string, 0)
+
+	for _, pod := range podList.Items {
+		pods = append(pods, pod.Name)
+	}
+
+	lcp := LCP(pods)
+	var podPromRegex string
+
+	if lcp == "" {
+		podPromRegex = strings.Join(pods, "|")
+	} else {
+		podPromRegex = fmt.Sprintf("%s.*", lcp)
+	}
+
+	promQuery := fmt.Sprintf(`sum(container_memory_working_set_bytes{namespace="%s", pod=~"%s", container!="", image!=""})`, ns, podPromRegex)
+
+	val, err := getPromQueryResult(promQuery)
+	if err != nil {
+		return nil, err
+	}
+	return val, nil
+}
+
 func getPodsCPU(ns string, selector map[string]string) (*float64, error) {
 	kc, err := getKubeClient()
 	if err != nil {
@@ -187,7 +223,43 @@ func getPodsCPU(ns string, selector map[string]string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s"})`, ns, podPromRegex)
+	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s", container!=""})`, ns, podPromRegex)
+
+	val, err := getPromQueryResult(promQuery)
+	if err != nil {
+		return nil, err
+	}
+	return val, nil
+}
+
+func getPodsStorage(ns string, selector map[string]string) (*float64, error) {
+	kc, err := getKubeClient()
+	if err != nil {
+		return nil, err
+	}
+	podList, err := kc.CoreV1().Pods(ns).List(context.Background(), metav1.ListOptions{
+		LabelSelector: labels.Set(selector).String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	pods := make([]string, 0)
+
+	for _, pod := range podList.Items {
+		pods = append(pods, pod.Name)
+	}
+
+	lcp := LCP(pods)
+	var podPromRegex string
+
+	if lcp == "" {
+		podPromRegex = strings.Join(pods, "|")
+	} else {
+		podPromRegex = fmt.Sprintf("%s.*", lcp)
+	}
+
+	promQuery := fmt.Sprintf(`avg(container_blkio_device_usage_total{namespace="%s", pod=~"%s"})`, ns, podPromRegex)
 
 	val, err := getPromQueryResult(promQuery)
 	if err != nil {
@@ -201,7 +273,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println("CPU Usage: ", *val)
+	fmt.Println("CPU Usage in core(StatefulSet): ", *val)
 
 	selector := make(map[string]string)
 	selector["app.kubernetes.io/instance"] = "mg-sh"
@@ -212,6 +284,17 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println("CPU Usage: ", *val)
+	fmt.Println("CPU Usage in core(Pods): ", *val)
 
+	memory, err := getPodsMemory("demo", selector)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println("Memory usage in MB(Pods): ", *memory/1024/1024)
+
+	storage, err := getPodsStorage("demo", selector)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println("Storage usage in MB(Pods): ", *storage/1024/1024)
 }
