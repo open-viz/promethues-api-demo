@@ -78,14 +78,19 @@ func getStatefulSetCPU(ns, name string) (*float64, error) {
 
 	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s", container!=""})`, ns, podPromRegex)
 
-	val, err := getPromQueryResult(promQuery)
+	metrics, err := getPromQueryResult(promQuery)
 	if err != nil {
 		return nil, err
 	}
-	return val, nil
+	totalUsage := float64(0)
+	for k, v := range metrics {
+		fmt.Printf("%s =========> %v\n", k, v)
+		totalUsage += v
+	}
+	return &totalUsage, nil
 }
 
-func getPromQueryResult(promQuery string) (*float64, error) {
+func getPromQueryResult(promQuery string) (map[string]float64, error) {
 	client, err := promapi.NewClient(promapi.Config{
 		Address: "http://127.0.0.1:9090/",
 	})
@@ -107,7 +112,10 @@ func getPromQueryResult(promQuery string) (*float64, error) {
 
 	cpu := float64(0)
 
+	metricsMap := make(map[string]float64)
+
 	for _, m := range metrics {
+		//fmt.Println(m)
 		val := strings.Split(m, "=>")
 		if len(val) != 2 {
 			return nil, fmt.Errorf("metrics %s is invalid", m)
@@ -122,8 +130,11 @@ func getPromQueryResult(promQuery string) (*float64, error) {
 			return nil, err
 		}
 		cpu += metricVal
+
+		metricsMap[val[0]] = metricVal
 	}
-	return &cpu, nil
+
+	return metricsMap, nil
 }
 
 func LCP(strs []string) string {
@@ -187,13 +198,18 @@ func getPodsMemory(ns string, selector map[string]string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	promQuery := fmt.Sprintf(`sum(container_memory_working_set_bytes{namespace="%s", pod=~"%s", container!="", image!=""})`, ns, podPromRegex)
+	promQuery := fmt.Sprintf(`sum(container_memory_working_set_bytes{namespace="%s", pod=~"%s", container!="", image!=""}) by (pod)`, ns, podPromRegex)
 
-	val, err := getPromQueryResult(promQuery)
+	metrics, err := getPromQueryResult(promQuery)
 	if err != nil {
 		return nil, err
 	}
-	return val, nil
+	totalUsage := float64(0)
+	for k, v := range metrics {
+		fmt.Printf("%s =========> %v MB\n", k, v/1024/1024)
+		totalUsage += v
+	}
+	return &totalUsage, nil
 }
 
 func getPodsCPU(ns string, selector map[string]string) (*float64, error) {
@@ -223,13 +239,18 @@ func getPodsCPU(ns string, selector map[string]string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s", container!=""})`, ns, podPromRegex)
+	promQuery := fmt.Sprintf(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace="%s", pod=~"%s", container!=""}) by (pod)`, ns, podPromRegex)
 
-	val, err := getPromQueryResult(promQuery)
+	metrics, err := getPromQueryResult(promQuery)
 	if err != nil {
 		return nil, err
 	}
-	return val, nil
+	totalUsage := float64(0)
+	for k, v := range metrics {
+		fmt.Printf("%s =========> %v\n", k, v)
+		totalUsage += v
+	}
+	return &totalUsage, nil
 }
 
 func getPodsStorage(ns string, selector map[string]string) (*float64, error) {
@@ -259,13 +280,18 @@ func getPodsStorage(ns string, selector map[string]string) (*float64, error) {
 		podPromRegex = fmt.Sprintf("%s.*", lcp)
 	}
 
-	promQuery := fmt.Sprintf(`avg(container_blkio_device_usage_total{namespace="%s", pod=~"%s"})`, ns, podPromRegex)
+	promQuery := fmt.Sprintf(`avg(container_blkio_device_usage_total{namespace="%s", pod=~"%s"}) by (pod)`, ns, podPromRegex)
 
-	val, err := getPromQueryResult(promQuery)
+	metrics, err := getPromQueryResult(promQuery)
 	if err != nil {
 		return nil, err
 	}
-	return val, nil
+	totalUsage := float64(0)
+	for k, v := range metrics {
+		fmt.Printf("%s =========> %v MB\n", k, v/1024/1024)
+		totalUsage += v
+	}
+	return &totalUsage, nil
 }
 
 func main() {
