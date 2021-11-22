@@ -1,0 +1,12 @@
+apiVersion: appcatalog.appscode.com/v1alpha1
+kind: AppBinding
+metadata:
+  name: grafana-apb
+  namespace: demo
+spec:
+  datasource:
+    name: some-random-demo
+  clientConfig:
+    url: http://prometheus-grafana.monitoring.svc:80
+  secret:
+    name: grafana-key
