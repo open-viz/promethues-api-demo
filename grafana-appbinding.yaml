@@ -1,7 +1,7 @@
 apiVersion: appcatalog.appscode.com/v1alpha1
 kind: AppBinding
 metadata:
-  name: grafana-apb
+  name: bb-grafana
   namespace: demo
 spec:
   parameters:
