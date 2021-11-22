@@ -1,0 +1,14 @@
+apiVersion: openviz.dev/v1alpha1
+kind: Datasource
+metadata:
+  name: sample-ds
+  namespace: demo
+spec:
+  access: proxy
+  grafana:
+    name: grafana-apb
+  name: some-random-name
+  orgId: 1
+  type: prometheus
+  url: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+  
