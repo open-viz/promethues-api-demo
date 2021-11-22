@@ -4,8 +4,8 @@ metadata:
   name: grafana-apb
   namespace: demo
 spec:
-  datasource:
-    name: some-random-demo
+  parameters:
+    datasource: some-random-demo
   clientConfig:
     url: http://prometheus-grafana.monitoring.svc:80
   secret:
