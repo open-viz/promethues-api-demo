@@ -1,0 +1,64 @@
+cluster: ui-lke-linode
+datasource: prometheus-ds-ui-lke-linode
+---
+kind: AppBinding
+metadata:
+  name: appbinding-ui-lke-linode
+spec:
+  parameters:
+    apiVersion: openviz.dev/v1alpha1
+    kind: DatasourceConfiguration
+    metadata:
+      name: prometheus-ds-ui-lke-linode
+---
+MongoDB: mg-sh
+namespace: demo
+---
+
+apiVersion: ui.kubedb.com/v1alpha1
+kind: MongoDBOverview
+metadata:
+  name: mg-sh            # selector
+  namespace: demo        # selector
+spec:
+  name: mg-sh
+  namespace: demo
+  version:
+  ...
+  ...
+
+---
+
+apiVersion: ui.openviz.dev/v1alpha1
+kind: EmbeddedDashboard
+metadata:
+  name: emDash
+  labels:
+  # what are the labels?
+request:
+  ref:
+    name: # name unknown
+    selector:
+    # what are the selectors?
+  panelTitles:
+response:
+  urls:
+
+---
+
+apiVersion: ui.k8s.appscode.com/v1alpha1
+kind: PodView
+metadata:
+  name:         # pod name managed by MongoDB
+  namespace:    # pod namespace managed by MongoDB
+  labels:
+  # what are the lables?
+spec:
+  resources:
+    ...
+    ...
+  containers:
+    ...
+    ...
+
+
